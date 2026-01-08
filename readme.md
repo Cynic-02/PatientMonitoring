@@ -22,3 +22,31 @@ How to use:
 Notes:
 - The workflow uses `gradle/gradle-build-action` to install Gradle on the runner, so the wrapper is not strictly required for the workflow to run. However, committing the Gradle wrapper is recommended for reproducible builds.
 - The APK produced is the Debug build (signed with the debug key) and is suitable for installing on a device for testing.
+
+---
+
+## Release-signed build (optional)
+
+You can configure a signed Release build in CI by creating a Java keystore and storing it as a secret in the GitHub repository.
+
+1) Generate a keystore locally:
+
+```bash
+keytool -genkeypair -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias my_key_alias
+```
+
+2) Base64-encode the keystore and add it as a repository secret named `KEYSTORE_BASE64`:
+
+- macOS / Linux: `base64 my-release-key.jks | pbcopy` (or `base64 my-release-key.jks > keystore.b64` then paste)
+- Windows (PowerShell): `[Convert]::ToBase64String([IO.File]::ReadAllBytes('my-release-key.jks')) | Set-Clipboard`
+
+3) Add secrets `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` (same alias password used when generating the keystore).
+
+4) There is a provided GitHub Actions workflow `.github/workflows/android-release.yml` which:
+   - Decodes the keystore from `KEYSTORE_BASE64` and saves it as `release-keystore.jks` in the runner
+   - Sets `KEYSTORE_PATH` and invokes Gradle `assembleRelease` with signing values read from environment variables
+   - Uploads the resulting `app-release.apk` as an artifact named `app-release-apk` (download from Actions UI)
+
+5) Use the workflow dispatch or push a tag like `v1.0.0` to trigger a release-signed build.
+
+If you'd like, I can help you generate the keystore locally or guide you through adding the secrets in the repository settings.
