@@ -34,6 +34,7 @@ jobs:
       - name: Build Debug APK
         uses: gradle/gradle-build-action@v2
         with:
+          gradle-version: '8.0'
           arguments: assembleDebug
 
       - name: Upload APK artifact
