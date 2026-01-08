@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Patient Monitor</string>
+
+    <!-- Extracted strings -->
+    <string name="disconnected">Disconnected</string>
+    <string name="heart_rate">Heart Rate</string>
+    <string name="placeholder_dash">--</string>
+    <string name="bpm"> BPM</string>
+    <string name="oxygen_level">Oxygen Level</string>
+    <string name="percent"> %</string>
+    <string name="patient_status">Patient Status</string>
+    <string name="connect">CONNECT</string>
+</resources>
