@@ -19,7 +19,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.content.IntentFilter;
-import android.content.BroadcastReceiver; 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -530,12 +531,6 @@ public class MainActivity extends AppCompatActivity {
         btnScan.setText(R.string.scan);
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        stopDiscovery();
-    }
-
     // ---------------------- End Bluetooth Scanning ----------------------
 
     @Override
@@ -573,6 +568,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        stopDiscovery();
         if (isConnected) {
             disconnect();
         }
