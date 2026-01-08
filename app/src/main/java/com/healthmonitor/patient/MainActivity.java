@@ -221,8 +221,24 @@ public class MainActivity extends AppCompatActivity {
                         bytes = inputStream.read(buffer);
                         String receivedData = new String(buffer, 0, bytes);
                         dataBuffer.append(receivedData);
-                        
-                        processDataBuffer();
+
+                        // Process complete lines (newline-delimited messages)
+                        int newlineIndex;
+                        while ((newlineIndex = dataBuffer.indexOf("\n")) != -1) {
+                            String line = dataBuffer.substring(0, newlineIndex).trim();
+                            if (!line.isEmpty()) {
+                                processIncomingMessage(line);
+                            }
+                            // remove processed line including newline
+                            dataBuffer.delete(0, newlineIndex + 1);
+                        }
+
+                        // Fallback: if no newline but buffer has enough content, try to process heuristically
+                        if (dataBuffer.length() > 0 && !dataBuffer.toString().contains("\n") && dataBuffer.length() > 200) {
+                            String partial = dataBuffer.toString();
+                            processIncomingMessage(partial);
+                            dataBuffer.setLength(0);
+                        }
                     }
                     Thread.sleep(50);
                 } catch (IOException e) {
@@ -241,68 +257,58 @@ public class MainActivity extends AppCompatActivity {
         dataThread.start();
     }
 
-    private void processDataBuffer() {
-        String data = dataBuffer.toString();
-        
-        // Try parsing as comma/semicolon/pipe delimited string
-        if (data.contains(",") || data.contains(";") || data.contains("|")) {
-            String delimiter = data.contains(",") ? "," : (data.contains(";") ? ";" : "\\|");
-            String[] parts = data.split(delimiter);
-            
-            if (parts.length >= 3) {
-                try {
+    private void processIncomingMessage(String data) {
+        // Accept formats: CSV/semicolon/pipe, key-value (HR:120 O2:98 STATUS:1), or space-delimited
+        try {
+            // CSV style
+            if (data.contains(",") || data.contains(";") || data.contains("|")) {
+                String delimiter = data.contains(",") ? "," : (data.contains(";") ? ";" : "\\|");
+                String[] parts = data.split(delimiter);
+                if (parts.length >= 3) {
                     int heartRate = extractNumber(parts[0]);
                     int oxygenLevel = extractNumber(parts[1]);
                     int status = extractNumber(parts[2]);
-                    
                     if (heartRate >= 0 && oxygenLevel >= 0 && (status == 0 || status == 1)) {
                         updateUI(heartRate, oxygenLevel, status);
-                        dataBuffer.setLength(0);
+                        return;
                     }
-                } catch (Exception e) {
-                    // Continue buffering
                 }
             }
-        }
-        // Try parsing as key-value pairs
-        else if (data.contains("HR") || data.contains("O2") || data.contains("STATUS")) {
-            Pattern hrPattern = Pattern.compile("HR[:\\s]*([0-9]+)");
-            Pattern o2Pattern = Pattern.compile("O2[:\\s]*([0-9]+)");
-            Pattern statusPattern = Pattern.compile("STATUS[:\\s]*([0-1])");
-            
-            Matcher hrMatcher = hrPattern.matcher(data);
-            Matcher o2Matcher = o2Pattern.matcher(data);
-            Matcher statusMatcher = statusPattern.matcher(data);
-            
-            if (hrMatcher.find() && o2Matcher.find() && statusMatcher.find()) {
-                int heartRate = Integer.parseInt(hrMatcher.group(1));
-                int oxygenLevel = Integer.parseInt(o2Matcher.group(1));
-                int status = Integer.parseInt(statusMatcher.group(1));
-                
-                updateUI(heartRate, oxygenLevel, status);
-                dataBuffer.setLength(0);
-            }
-        }
-        // Try parsing as space-delimited
-        else if (data.trim().split("\\s+").length >= 3) {
-            String[] parts = data.trim().split("\\s+");
-            try {
-                int heartRate = Integer.parseInt(parts[0].replaceAll("[^0-9]", ""));
-                int oxygenLevel = Integer.parseInt(parts[1].replaceAll("[^0-9]", ""));
-                int status = Integer.parseInt(parts[2].replaceAll("[^0-1]", ""));
-                
-                if (heartRate > 0 && oxygenLevel > 0) {
+
+            // Key-value style
+            if (data.contains("HR") || data.contains("O2") || data.contains("STATUS")) {
+                Pattern hrPattern = Pattern.compile("HR[:\\s]*([0-9]+)");
+                Pattern o2Pattern = Pattern.compile("O2[:\\s]*([0-9]+)");
+                Pattern statusPattern = Pattern.compile("STATUS[:\\s]*([0-1])");
+
+                Matcher hrMatcher = hrPattern.matcher(data);
+                Matcher o2Matcher = o2Pattern.matcher(data);
+                Matcher statusMatcher = statusPattern.matcher(data);
+
+                if (hrMatcher.find() && o2Matcher.find() && statusMatcher.find()) {
+                    int heartRate = Integer.parseInt(hrMatcher.group(1));
+                    int oxygenLevel = Integer.parseInt(o2Matcher.group(1));
+                    int status = Integer.parseInt(statusMatcher.group(1));
                     updateUI(heartRate, oxygenLevel, status);
-                    dataBuffer.setLength(0);
+                    return;
                 }
-            } catch (Exception e) {
-                // Continue buffering
             }
-        }
-        
-        // Clear buffer if it gets too large
-        if (dataBuffer.length() > 500) {
-            dataBuffer.setLength(0);
+
+            // Space-delimited
+            String[] parts = data.trim().split("\\s+");
+            if (parts.length >= 3) {
+                try {
+                    int heartRate = Integer.parseInt(parts[0].replaceAll("[^0-9]", ""));
+                    int oxygenLevel = Integer.parseInt(parts[1].replaceAll("[^0-9]", ""));
+                    int status = Integer.parseInt(parts[2].replaceAll("[^0-1]", ""));
+                    if (heartRate > 0 && oxygenLevel > 0) {
+                        updateUI(heartRate, oxygenLevel, status);
+                        return;
+                    }
+                } catch (Exception ignored) {}
+            }
+        } catch (Exception ignored) {
+            // Ignore malformed data and continue
         }
     }
 
