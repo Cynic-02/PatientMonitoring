@@ -10,4 +10,10 @@
     <string name="percent"> %</string>
     <string name="patient_status">Patient Status</string>
     <string name="connect">CONNECT</string>
+
+    <!-- Scanning strings -->
+    <string name="scan">SCAN</string>
+    <string name="scanning">Scanning...</string>
+    <string name="no_devices_found">No devices found</string>
+    <string name="scan_cancelled">Scan cancelled</string>
 </resources>
